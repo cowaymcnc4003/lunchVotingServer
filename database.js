@@ -249,6 +249,33 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
     { $set: updatedVoteData }
   );
 
+  // 투표의 전체 사용자 내역 조회
+  const votedetailData = await getVotedetail(undefined, voteId, undefined);
+  console.log(`votedetailData ${JSON.stringify(votedetailData)}`);
+
+  // 투표의 전체 사용자 내역 조회 voteItemSeq 만 뽑기
+  const oldVoteItemSeqsValues = votedetailData.map(detail => detail.voteItemSeq);
+  console.log(voteItems);
+  // 신규 투표항목에서 seq만 있는 항목 뽑기
+  const newVoteItem = [];
+  for (const item of voteItems) {
+    if (item.voteItemSeq) {
+      newVoteItem.push({ "voteItemSeq": item.voteItemSeq });
+    }
+  }
+  console.log(`newVoteItem ${newVoteItem}`);
+  const newVoteItemSeqsValues = newVoteItem.map(item => item.voteItemSeq);
+  console.log(`oldVoteItemSeqsValues ${JSON.stringify(oldVoteItemSeqsValues)}`);
+  console.log(`newVoteItemSeqsValues ${JSON.stringify(newVoteItemSeqsValues)}`);
+  // 선택되지 않은 이전 항목 voteItemSeq 뽑기
+  const notDuplicateOldVoteItemSeqs = oldVoteItemSeqsValues.filter(seq => !newVoteItemSeqsValues.includes(seq));
+  console.log(`notDuplicateOldVoteItemSeqs ${JSON.stringify(notDuplicateOldVoteItemSeqs)}`);
+
+  // 투표 항목에서 선택되지 않은 이전 항목 voteItemSeq 제거
+  await collVoteDetail.deleteMany(
+    { voteId: new ObjectId(voteId), voteItemSeq: { $in: notDuplicateOldVoteItemSeqs } }
+  );
+
   return { statusCode: 200, success: true, message: "Vote items updated successfully." };
 }
 
