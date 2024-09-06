@@ -174,7 +174,7 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
   // 투표 리스트 조회
   const res = await collVote.find(query).toArray();
   console.log(res)
-  return res;
+  return { statusCode: 200, success: true, data: res };
 }
 
 // 새로운 orderSeq를 생성하는 함수
@@ -191,7 +191,7 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
   // 투표 데이터 조회
   const existingVote = await collVote.findOne({ voteId: new ObjectId(voteId) });
   if (!existingVote) {
-    return { success: false, message: "투표를 찾을 수 없습니다." };
+    return { statusCode: 404, success: false, message: "Vote not found." };
   }
 
   // 기존 항목들의 orderSeq 추출
@@ -249,7 +249,7 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
     { $set: updatedVoteData }
   );
 
-  return { success: true, message: "투표 항목이 성공적으로 업데이트되었습니다." };
+  return { statusCode: 200, success: true, message: "Vote items updated successfully." };
 }
 
 
@@ -280,7 +280,7 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, v
 
   // 투표 정보를 MongoDB에 삽입
   const res = await collVote.insertOne(newVote);
-  return res;
+  return { statusCode: 201, success: true, message: "Vote inserted successfully.", data: res };
 }
 
 export async function getVotedetail(gubun, voteId, userSeq) {
@@ -361,7 +361,7 @@ export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
     // 투표 항목에 없는 새로운 투표 항목 체크
     const invalidVoteItems = newVoteItemSeqs.filter(item => !validVoteItemSeqs.includes(item.voteItemSeq));
     if (invalidVoteItems.length > 0) {
-      return { success: false, message: "Invalid vote items found.", invalidItems: invalidVoteItems };
+      return { statusCode: 400, success: false, message: "Invalid vote items found.", invalidItems: invalidVoteItems };
     }
   }
 
@@ -433,7 +433,7 @@ export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
     const result = await collVoteDetail.insertMany(voteDetails);
   }
 
-  return { success: true, message: "Votes updated successfully." };
+  return { statusCode: 200, success: true, message: "Votes updated successfully." };
 }
 
 export async function deleteVote(voteId) {
@@ -453,11 +453,12 @@ export async function deleteVote(voteId) {
     console.log(voteDetailDeleteResult);
 
     return {
+      statusCode: 200,
       success: true,
-      message: `투표가 성공적으로 삭제되었습니다. 관련된 투표 상세 기록 ${voteDetailDeleteResult.deletedCount}건도 삭제되었습니다.`
+      message: `Vote successfully deleted. ${voteDetailDeleteResult.deletedCount} related vote details also removed.`
     };
   } else {
-    return { success: false, message: "투표 삭제에 실패하였습니다." };
+    return { statusCode: 500, success: false, message: "Failed to delete vote." };
   }
 }
 
