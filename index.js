@@ -1,7 +1,8 @@
 import express from 'express'
-import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, getVotes, insertVote, insertVoteDetail, getVote, insertVoting, updateVote, deleteVote } from "./database.js"
+import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting } from "./database.js"
 import { swaggerUi, specs } from "./swagger.js";
 import jwt from "jsonwebtoken";
+import "./swaggerVotePaths.js";
 
 const app = express()
 app.use(express.json()) // for parsing application/json
@@ -13,91 +14,6 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs))
 app.get('/', (req, res) => {
   res.send('Hello World!')
 })
-
-/**
- * @swagger
- * paths:
- *  /regist:
- *    post:
- *      summary: "회원가입"
- *      description: "새로운 사용자를 등록합니다."
- *      tags: [User]
- *      requestBody:
- *        required: true
- *        content:
- *          application/json:
- *            schema:
- *              type: object
- *              properties:
- *                id:
- *                  type: string
- *                  description: "사용자 ID"
- *                  example: "user123"
- *                password:
- *                  type: string
- *                  description: "사용자 비밀번호"
- *                  example: "password123"
- *                username:
- *                  type: string
- *                  description: "사용자 이름"
- *                  example: "John Doe"
- *      responses:
- *        201:
- *          description: "아이디 생성 완료"
- *          content:
- *            application/json:
- *              schema:
- *                type: object
- *                properties:
- *                  success:
- *                    type: boolean
- *                    example: true
- *                  message:
- *                    type: string
- *                    example: "아이디 생성 완료"
- *        409:
- *          description: "중복된 아이디입니다."
- *          content:
- *            application/json:
- *              schema:
- *                type: object
- *                properties:
- *                  success:
- *                    type: boolean
- *                    example: false
- *                  message:
- *                    type: string
- *                    example: "중복된 아이디입니다."
- *        400:
- *          description: "필수 항목이 누락되었습니다."
- *          content:
- *            application/json:
- *              schema:
- *                type: object
- *                properties:
- *                  success:
- *                    type: boolean
- *                    example: false
- *                  message:
- *                    type: string
- *                    example: "필수 항목이 누락되었습니다."
- *        500:
- *          description: "서버 오류 발생"
- *          content:
- *            application/json:
- *              schema:
- *                type: object
- *                properties:
- *                  success:
- *                    type: boolean
- *                    example: false
- *                  message:
- *                    type: string
- *                    example: "서버 오류 발생"
- *                  error:
- *                    type: string
- *                    example: "Internal server error"
- */
 
 // 회원가입
 app.post("/regist", async (req, res) => {
@@ -119,8 +35,6 @@ app.post("/regist", async (req, res) => {
   });
 });
 
-
-
 // 로그인
 app.post("/login", async (req, res) => {
   const { id, password } = req.body;
@@ -131,15 +45,6 @@ app.post("/login", async (req, res) => {
     expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
   });
   return res.send({ token });
-})
-
-// 투표항목 삭제
-app.post('/deleteVote', async (req, res) => {
-  console.log(req.body);
-  const { voteId } = req.body;
-  if (!voteId) return res.sendStatus(401);
-  const result = await deleteVote(voteId);
-  res.send(result)
 })
 
 function authorizationJWT(req, res, next) {
@@ -171,54 +76,101 @@ app.post("/token", (req, res) => {
 // 투표 날짜별 조회
 app.post('/votes', async (req, res) => {
   const { gubun, userSeq, startDate, endDate } = req.body;
-  const result = await getVotes(gubun, userSeq, startDate, endDate)
-  res.send(result)
-})
+  try {
+    const result = await getVotes(gubun, userSeq, startDate, endDate);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
 
-// 투표 조회
+// 특정 투표 조회
 app.post('/vote', async (req, res) => {
   const { gubun, voteId, userSeq } = req.body;
-  const result = await getVote(gubun, voteId, userSeq);
-  console.log(result);
-  res.send(result)
-})
+  try {
+    const result = await getVote(gubun, voteId, userSeq);
+    console.log(result);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
 
 // 투표항목 등록
 app.put('/vote', async (req, res) => {
   const { votename, gubun, userSeq, startDate, endDate, voteOption, voteItems } = req.body;
   console.log(JSON.stringify(req.body));
-  if (!votename || !gubun || !startDate || (userSeq === undefined) || !endDate || !voteOption || !voteItems) return res.sendStatus(401);
-  const result = await insertVote(votename, gubun, userSeq, startDate, endDate, voteOption, voteItems);
-  res.sendStatus(201)
-})
+  if (!votename || !gubun || !startDate || userSeq === undefined || !endDate || !voteOption || !voteItems) {
+    return res.sendStatus(400); // 401 대신 400으로 변경: 잘못된 요청
+  }
+  try {
+    await insertVote(votename, gubun, userSeq, startDate, endDate, voteOption, voteItems);
+    res.sendStatus(201);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
 
 // 투표항목 수정
 app.post('/updateVote', async (req, res) => {
   const { voteId, voteItems, votename, startDate, endDate, voteOption } = req.body;
   console.log(JSON.stringify(req.body));
-  if (!voteId || !votename || !startDate || !voteOption || !endDate || !voteOption || !voteItems) return res.sendStatus(401);
-  const result = await updateVote(voteId, voteItems, votename, startDate, endDate, voteOption);
-  res.send(result)
-})
-
-// 투표상세 조회
-app.put('/votedetail', async (req, res) => {
-  const { voteId, gubun, voteItemSeq, userSeq } = req.body;
-  console.log(JSON.stringify(req.body));
-  if (!voteId || !gubun || !voteItemSeq || (userSeq === undefined)) return res.sendStatus(401);
-  const result = await insertVoteDetail(voteId, gubun, voteItemSeq, userSeq);
-  res.sendStatus(201)
-})
+  if (!voteId || !votename || !startDate || !endDate || !voteOption || !voteItems) {
+    return res.sendStatus(400); // 401 대신 400으로 변경: 잘못된 요청
+  }
+  try {
+    const result = await updateVote(voteId, voteItems, votename, startDate, endDate, voteOption);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
 
 // 투표하기
 app.post('/voting', async (req, res) => {
+  console.log('23');
   const { voteId, userSeq, gubun, voteItems } = req.body;
-  const result = await insertVoting(voteId, userSeq, gubun, voteItems);
-  console.log(result);
-  res.send(result)
-})
+  try {
+    const result = await updateVoting(voteId, userSeq, gubun, voteItems);
+    console.log(result);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
+
+// 투표항목 삭제
+app.post('/deleteVote', async (req, res) => {
+  console.log(req.body);
+  const { voteId } = req.body;
+  if (!voteId) {
+    return res.sendStatus(400); // 401 대신 400으로 변경: 잘못된 요청
+  }
+  try {
+    const result = await deleteVote(voteId);
+    res.json(result);
+  } catch (error) {
+    console.error(error);
+    res.sendStatus(500);
+  }
+});
+
 
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`)
 })
+
+// 투표상세 샘플
+// app.put('/votedetail', async (req, res) => {
+//   const { voteId, gubun, voteItemSeq, userSeq } = req.body;
+//   console.log(JSON.stringify(req.body));
+//   if (!voteId || !gubun || !voteItemSeq || (userSeq === undefined)) return res.sendStatus(401);
+//   const result = await insertVoteDetail(voteId, gubun, voteItemSeq, userSeq);
+//   res.sendStatus(201)
+// })

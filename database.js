@@ -214,7 +214,7 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
         ...existingItem,
         voteName: item.voteName || existingItem.voteName,
         orderSeq: existingItem.orderSeq, // 기존 순서 유지
-        voteCount: item.voteCount || existingItem.voteCount
+        voteCount: existingItem.voteCount
       });
     } else {
       // 새로운 항목 추가 - 새로운 orderSeq 생성
@@ -342,97 +342,120 @@ export async function getVote(gubun, voteId, userSeq) {
   return extendedVoteData;
 }
 
-// 투표하기
-export async function insertVoting(voteId, userSeq, gubun, voteItems) {
+// 투표 등록 수정 API
+export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
   const objectIdVoteId = new ObjectId(voteId);
 
-  // 사용자의 투표 내역 조회
-  const votedetailData = await getVotedetail(gubun, objectIdVoteId, userSeq);
+  // 투표 내용있는지 체크
 
-  if (votedetailData.length !== 0) {
-    // 이미 투표한 경우, 중복 투표 방지
-    return { success: false, message: "User has already voted." };
+  const checkVote = await getVote(gubun, voteId, userSeq);
+  console.log(`checkVote ${JSON.stringify(checkVote)}`);
+  if (checkVote.length === 0) {
+    // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
+    return { success: false, message: "not found vote." };
+  } else {
+    // 투표 항목에서 유효한 항목 시퀀스만 추출
+    const validVoteItemSeqs = checkVote[0].voteItems.map(item => item.voteItemSeq);
+    console.log(`validVoteItemSeqs ${JSON.stringify(validVoteItemSeqs)}`);
+
+    // 투표 항목에 없는 새로운 투표 항목 체크
+    const invalidVoteItems = newVoteItemSeqs.filter(item => !validVoteItemSeqs.includes(item.voteItemSeq));
+    if (invalidVoteItems.length > 0) {
+      return { success: false, message: "Invalid vote items found.", invalidItems: invalidVoteItems };
+    }
   }
 
-  const voteDetails = voteItems.map((item) => ({
-    voteDetailId: new ObjectId(), // 새로운 ID 생성
-    voteId: objectIdVoteId,       // 투표 ID
-    userSeq,                      // 사용자 ID
-    gubun,
-    voteItemSeq: item.voteItemSeq, // 투표 항목 ID
-    createdDate: new Date(),
-    updateDate: new Date(),
-    deleteYn: "N"
-  }));
-  // 각 투표 항목의 카운트 업데이트
-  for (const item of voteItems) {
-    await collVote.updateOne(
-      { "voteId": objectIdVoteId, "voteItems.voteItemSeq": item.voteItemSeq },
-      { $inc: { "voteItems.$.voteCount": 1 } }
-    );
-  }
-  const result = await collVoteDetail.insertMany(voteDetails);
-  return result;
-}
 
-// 투표 수정 API
-export async function updateVoting(gubun, voteId, userSeq, newVoteItemSeqs) {
-  const objectIdVoteId = new ObjectId(voteId);
-
-  // 사용자가 이미 해당 투표에 투표했는지 확인
+  // 사용자가 투표내용
   const votedetailData = await getVotedetail(gubun, voteId, userSeq);
 
-  if (votedetailData.length === 0) {
-    // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
-    return { success: false, message: "User has not voted yet." };
-  }
+  // if (votedetailData.length === 0) {
+  //   // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
+  //   return { success: false, message: "User has not voted yet." };
+  // }
 
-  // 기존 투표 항목의 투표 항목 시퀀스 배열을 가져옴
-  const oldVoteItemSeqs = votedetailData.map(detail => detail.voteItemSeq);
+  // 속성만 추출하여 비교
+  const oldVoteItemSeqsValues = votedetailData.map(detail => detail.voteItemSeq);
+  const newVoteItemSeqsValues = newVoteItemSeqs.map(item => item.voteItemSeq);
+
+  console.log(`oldVoteItemSeqsValues ${JSON.stringify(oldVoteItemSeqsValues)}`);
+  console.log(`newVoteItemSeqsValues ${JSON.stringify(newVoteItemSeqsValues)}`);
+
 
   // 중복된 항목만 처리
-  const duplicateVoteItemSeqs = oldVoteItemSeqs.filter(seq => newVoteItemSeqs.includes(seq));
-  const newVoteItemSeqsToAdd = newVoteItemSeqs.filter(seq => !oldVoteItemSeqs.includes(seq));
+  const duplicateVoteItemSeqs = oldVoteItemSeqsValues.filter(seq => newVoteItemSeqsValues.includes(seq));
+  const notDuplicateOldVoteItemSeqs = oldVoteItemSeqsValues.filter(seq => !newVoteItemSeqsValues.includes(seq));
+  const newVoteItemSeqsToAdd = newVoteItemSeqsValues.filter(seq => !oldVoteItemSeqsValues.includes(seq));
 
-  // 기존 투표 항목의 투표 수 감소 (중복된 항목만)
-  if (duplicateVoteItemSeqs.length > 0) {
+  console.log(`duplicateVoteItemSeqs ${JSON.stringify(duplicateVoteItemSeqs)}`);
+  console.log(`newVoteItemSeqsValues ${JSON.stringify(newVoteItemSeqsValues)}`);
+  console.log(`newVoteItemSeqs ${JSON.stringify(newVoteItemSeqs)}`);
+  console.log(`notDuplicateOldVoteItemSeqs ${JSON.stringify(notDuplicateOldVoteItemSeqs)}`);
+  console.log(`newVoteItemSeqsToAdd ${JSON.stringify(newVoteItemSeqsToAdd)}`);
+
+
+  // 중복된 항목은 그대로 두고
+  // 중복되지 않은 예전 항목의 투표 수 감소 및 votedetail 제거
+  if (notDuplicateOldVoteItemSeqs.length > 0) {
     await collVote.updateMany(
-      { _id: objectIdVoteId, "voteItems.voteItemSeq": { $in: duplicateVoteItemSeqs } },
-      { $inc: { "voteItems.$[elem].voteCount": -1, totalVoteCount: -duplicateVoteItemSeqs.length } },
-      { arrayFilters: [{ "elem.voteItemSeq": { $in: duplicateVoteItemSeqs } }] }
+      { voteId: objectIdVoteId, "voteItems.voteItemSeq": { $in: notDuplicateOldVoteItemSeqs } },
+      { $inc: { "voteItems.$[elem].voteCount": -1, totalVoteCount: -notDuplicateOldVoteItemSeqs.length } },
+      { arrayFilters: [{ "elem.voteItemSeq": { $in: notDuplicateOldVoteItemSeqs } }] }
+    );
+
+    // 투표 기록에서 제거
+    await collVoteDetail.deleteMany(
+      { voteId: objectIdVoteId, userSeq: userSeq, voteItemSeq: { $in: notDuplicateOldVoteItemSeqs } }
     );
   }
 
-  // 새로운 투표 항목의 투표 수 증가
+  // 새로운 투표 항목의 투표 수 증가 및 votedetail 생성
   if (newVoteItemSeqsToAdd.length > 0) {
     await collVote.updateMany(
-      { _id: objectIdVoteId, "voteItems.voteItemSeq": { $in: newVoteItemSeqsToAdd } },
+      { voteId: objectIdVoteId, "voteItems.voteItemSeq": { $in: newVoteItemSeqsToAdd } },
       { $inc: { "voteItems.$[elem].voteCount": 1, totalVoteCount: newVoteItemSeqsToAdd.length } },
       { arrayFilters: [{ "elem.voteItemSeq": { $in: newVoteItemSeqsToAdd } }] }
     );
 
-    // 기존 투표 기록 업데이트
-    await collVoteDetail.updateOne(
-      { voteId: objectIdVoteId, userSeq: userSeq },
-      { $set: { voteItemSeq: newVoteItemSeqsToAdd[0], updateDate: new Date() } } // 이 부분은 새로운 투표 항목으로 업데이트
-    );
+    // 새로운 투표 항목에 대한 votedetail 생성
+    const voteDetails = newVoteItemSeqsToAdd.map((seq) => ({
+      voteDetailId: new ObjectId(), // 새로운 ID 생성
+      voteId: objectIdVoteId,       // 투표 ID
+      userSeq,                      // 사용자 ID
+      gubun,
+      voteItemSeq: seq, // 투표 항목 ID
+      createdDate: new Date(),
+      updateDate: new Date(),
+      deleteYn: "N"
+    }));
+    console.log(`voteDetails ${JSON.stringify(voteDetails)}`);
+    // 각 투표 항목의 카운트 업데이트
+    const result = await collVoteDetail.insertMany(voteDetails);
   }
 
   return { success: true, message: "Votes updated successfully." };
 }
 
 export async function deleteVote(voteId) {
+  const objectIdVoteId = new ObjectId(voteId);
+
   // 투표 데이터 조회
-  const existingVote = await collVote.findOne({ voteId: new ObjectId(voteId) });
+  const existingVote = await collVote.findOne({ voteId: objectIdVoteId });
   if (!existingVote) {
     return { success: false, message: "투표를 찾을 수 없습니다." };
   }
 
   // 투표 데이터 삭제
-  const result = await collVote.deleteOne({ voteId: new ObjectId(voteId) });
-  console.log(result);
-  if (result.deletedCount === 1) {
-    return { success: true, message: "투표가 성공적으로 삭제되었습니다." };
+  const voteDeleteResult = await collVote.deleteOne({ voteId: objectIdVoteId });
+  if (voteDeleteResult.deletedCount === 1) {
+    // 투표 상세 데이터 (collVoteDetail) 삭제
+    const voteDetailDeleteResult = await collVoteDetail.deleteMany({ voteId: objectIdVoteId });
+    console.log(voteDetailDeleteResult);
+
+    return {
+      success: true,
+      message: `투표가 성공적으로 삭제되었습니다. 관련된 투표 상세 기록 ${voteDetailDeleteResult.deletedCount}건도 삭제되었습니다.`
+    };
   } else {
     return { success: false, message: "투표 삭제에 실패하였습니다." };
   }
