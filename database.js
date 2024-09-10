@@ -139,6 +139,20 @@ export async function login(id, password) {
       _id: 0,
       id: { $toString: "$_id" },
       id: 1,
+      username: 1,
+      
+      created: 1
+    }
+  });
+  return res;
+}
+
+export async function tokenCheck(id, password) {
+  const res = await collUser.findOne({ id: id, password: password }, {
+    projection: {
+      _id: 0,
+      id: { $toString: "$_id" },
+      id: 1,
       password: 1,
       created: 1
     }
@@ -379,7 +393,7 @@ export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
   console.log(`checkVote ${JSON.stringify(checkVote)}`);
   if (checkVote.length === 0) {
     // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
-    return { success: false, message: "not found vote." };
+    return { statusCode: 400, success: false, message: "not found vote." };
   } else {
     // 투표 항목에서 유효한 항목 시퀀스만 추출
     const validVoteItemSeqs = checkVote[0].voteItems.map(item => item.voteItemSeq);
@@ -469,7 +483,7 @@ export async function deleteVote(voteId) {
   // 투표 데이터 조회
   const existingVote = await collVote.findOne({ voteId: objectIdVoteId });
   if (!existingVote) {
-    return { success: false, message: "투표를 찾을 수 없습니다." };
+    return { statusCode: 400, success: false, message: "투표를 찾을 수 없습니다." };
   }
 
   // 투표 데이터 삭제

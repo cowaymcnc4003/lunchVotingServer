@@ -12,7 +12,7 @@ const options = {
     },
     servers: [
       {
-        url: "http://localhost:3000", // 요청 URL
+        url: "http://mcnccoway.asuscomm.com:9000", // 요청 URL
       },
     ],
   },

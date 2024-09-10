@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
-const port = 3000;
+const port = 9000;
 
 const users = [{ user: "user-1", password: "password-1", name: "name-1" }];
 const db = [{ title: "title-1", contents: "contents-1" }];

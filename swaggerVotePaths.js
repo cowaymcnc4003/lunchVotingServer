@@ -5,6 +5,17 @@
  *   title: API Documentation
  *   description: API 문서입니다.
  *   version: 1.0.0
+ * 
+ * components:
+ *   securitySchemes:
+ *     BearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT  # JWT 형식의 토큰 사용 시 명시
+ *
+ * security:
+ *   - BearerAuth: []
+ *
  * paths:
  *  /regist:
  *    post:
@@ -21,15 +32,19 @@
  *                id:
  *                  type: string
  *                  description: "사용자 ID"
- *                  example: "user123"
+ *                  example: "mhlee4"
  *                password:
  *                  type: string
  *                  description: "사용자 비밀번호"
- *                  example: "password123"
+ *                  example: "qwer1234"
  *                username:
  *                  type: string
  *                  description: "사용자 이름"
- *                  example: "John Doe"
+ *                  example: "이명한4"
+ *                gubun:
+ *                  type: string
+ *                  description: "시스템 구분"
+ *                  example: "mcnc"
  *      responses:
  *        201:
  *          description: "아이디 생성 완료"
@@ -101,11 +116,11 @@
  *                id:
  *                  type: string
  *                  description: "사용자 ID"
- *                  example: "user123"
+ *                  example: "mhlee"
  *                password:
  *                  type: string
  *                  description: "사용자 비밀번호"
- *                  example: "password123"
+ *                  example: "qwer1234"
  *      responses:
  *        200:
  *          description: "성공적으로 로그인하고 JWT 토큰을 발급받습니다."
@@ -137,6 +152,8 @@
  *     summary: "투표 리스트 조회"
  *     description: "지정된 날짜 범위와 기타 필터를 기반으로 투표 목록을 조회합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
@@ -230,6 +247,8 @@
  *     summary: "투표 조회"
  *     description: "특정 투표의 세부 사항을 조회합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
@@ -245,10 +264,6 @@
  *                 type: string
  *                 description: "투표 ID"
  *                 example: "66d9701e62a13f289618fb13"
- *               userSeq:
- *                 type: integer
- *                 description: "사용자 시퀀스 번호"
- *                 example: 0
  *     responses:
  *       200:
  *         description: "투표 조회 성공"
@@ -314,6 +329,8 @@
  *     summary: "투표항목 등록"
  *     description: "새로운 투표항목을 등록합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
@@ -390,6 +407,8 @@
  *     summary: "투표항목 수정"
  *     description: "기존 투표항목을 수정합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
@@ -473,6 +492,8 @@
  *     summary: "투표하기"
  *     description: "사용자가 투표를 제출합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
@@ -546,6 +567,8 @@
  *     summary: "투표항목 삭제"
  *     description: "특정 투표항목을 삭제합니다."
  *     tags: [Vote]
+ *     security:
+ *        - BearerAuth: []  # 각 경로에 security 추가
  *     requestBody:
  *       required: true
  *       content:
