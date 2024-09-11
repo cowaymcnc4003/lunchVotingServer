@@ -81,7 +81,7 @@ async function run() {
     const collection = db.collection("userInfo");
     // await collection.insertOne({ x: 1, y: "string" });
     await collection.insertOne({
-      userNumber: 0,
+      userSeq: 0,
       id: "mhlee",
       password: "qwer1234",
       username: "이명한",
@@ -119,7 +119,7 @@ export async function registUser(id, password, username) {
 
     // 사용자 등록
     const res = await collUser.insertOne({
-      userNumber: await getNextSequence("userId"),  // 고유한 사용자 번호
+      userSeq: await getNextSequence("userId"),  // 고유한 사용자 번호
       id: id,
       password: password,
       username: username,
@@ -140,7 +140,7 @@ export async function login(id, password) {
       id: { $toString: "$_id" },
       id: 1,
       username: 1,
-      
+      userSeq: 1,
       created: 1
     }
   });

@@ -42,7 +42,7 @@ app.post("/regist", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { id, password } = req.body;
   const result = await login(id, password);
-  if (!result) return res.sendStatus(401);
+  if (!result) return res.status(401).json({ statusCode: 401, result, message: '로그인 실패' });
   console.log(result);
   const token = jwt.sign({ id: id, password: password }, "secret", {
     expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
@@ -88,8 +88,8 @@ async function authorizationJWT(req, res, next) {
 app.post("/token", (req, res) => {
   const { id, pw } = req.body;
   const user = users[0];
-  if (id !== user.user) res.sendStatus(401);
-  if (pw !== user.password) res.sendStatus(401);
+  if (id !== user.user) res.status(401).json({ statusCode: 401, message: '유효하지 않은 토큰입니다.' });
+  if (pw !== user.password) res.status(401).json({ statusCode: 401, message: '유효하지 않은 토큰입니다.' });
   const token = jwt.sign({ id: id, name: user.name }, "secret", {
     expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
   });
@@ -117,7 +117,7 @@ app.post('/vote', authorizationJWT, async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error(error);
-    res.sendStatus(500);
+    res.status(401).json({ statusCode: 401, message: '투표 조회 실패' });
   }
 });
 
@@ -126,7 +126,7 @@ app.put('/vote', authorizationJWT, async (req, res) => {
   const { votename, gubun, userSeq, startDate, endDate, voteOption, voteItems } = req.body;
   console.log(JSON.stringify(req.body));
   if (!votename || !gubun || !startDate || userSeq === undefined || !endDate || !voteOption || !voteItems) {
-    return res.sendStatus(400); // 401 대신 400으로 변경: 잘못된 요청
+    return res.status(400).json({ statusCode: 400, message: '투표 등록 실패' });
   }
   try {
     await insertVote(votename, gubun, userSeq, startDate, endDate, voteOption, voteItems);
@@ -163,7 +163,6 @@ app.post('/voting', authorizationJWT, async (req, res) => {
     return res.json(result);
   } catch (error) {
     console.error(error);
-    res.sendStatus(500);
     return res.status(500).json({ statusCode: 500, message: '투표하기에 실패하셨습니다.' });
   }
 });
