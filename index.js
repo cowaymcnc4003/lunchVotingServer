@@ -19,15 +19,15 @@ app.get('/', (req, res) => {
 
 // 회원가입
 app.post("/regist", async (req, res) => {
-  const { id, password, username } = req.body;
+  const { id, password, username, gubun } = req.body;
 
   // 유효성 검사
-  if (!id || !password || !username) {
+  if (!id || !password || !username || !gubun) {
     return res.status(400).send({ success: false, message: "필수 항목이 누락되었습니다." });  // 400: Bad Request
   }
 
   // registUser 호출
-  const result = await registUser(id, password, username);
+  const result = await registUser(id, password, username, gubun);
 
   // 상태 코드에 따른 응답 처리
   res.status(result.statusCode).send({
@@ -123,6 +123,8 @@ app.post('/vote', authorizationJWT, async (req, res) => {
 
 // 투표항목 등록
 app.put('/vote', authorizationJWT, async (req, res) => {
+  console.log(req.body);
+
   const { votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems } = req.body;
   console.log(JSON.stringify(req.body));
   if (!votename || !gubun || !startDate || userSeq === undefined || !endDate || !voteOption || !voteItems || !username) {

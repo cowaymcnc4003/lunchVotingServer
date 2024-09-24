@@ -109,7 +109,7 @@ async function getNextSequence(name) {
   return sequenceDocument.sequence_value;
 }
 
-export async function registUser(id, password, username) {
+export async function registUser(id, password, username, gubun) {
   try {
     // ID 중복 체크
     const existingId = await collUser.findOne({ id: id });
@@ -123,6 +123,7 @@ export async function registUser(id, password, username) {
       id: id,
       password: password,
       username: username,
+      gubun: gubun,
       created: new Date(),
     });
 
@@ -380,10 +381,11 @@ export async function getVote(voteId, userSeq) {
 // 투표 등록 수정 API
 export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
   const objectIdVoteId = new ObjectId(voteId);
+  console.log(objectIdVoteId);
 
   // 투표 내용있는지 체크
 
-  const checkVote = await getVote(gubun, voteId, userSeq);
+  const checkVote = await getVote(voteId, userSeq);
   console.log(`checkVote ${JSON.stringify(checkVote)}`);
   if (checkVote.length === 0) {
     // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
