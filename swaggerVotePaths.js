@@ -346,6 +346,10 @@
  *                 type: string
  *                 description: "투표 구분"
  *                 example: "mcnc"
+ *               username:
+ *                 type: string
+ *                 description: "유저 내임"
+ *                 example: "이명한"
  *               userSeq:
  *                 type: integer
  *                 description: "사용자 시퀀스 번호"

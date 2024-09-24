@@ -110,9 +110,9 @@ app.post('/votes', authorizationJWT, async (req, res) => {
 
 // 특정 투표 조회
 app.post('/vote', authorizationJWT, async (req, res) => {
-  const { gubun, voteId, userSeq } = req.body;
+  const { voteId, userSeq } = req.body;
   try {
-    const result = await getVote(gubun, voteId, userSeq);
+    const result = await getVote(voteId, userSeq);
     console.log(result);
     res.json(result);
   } catch (error) {
@@ -123,13 +123,13 @@ app.post('/vote', authorizationJWT, async (req, res) => {
 
 // 투표항목 등록
 app.put('/vote', authorizationJWT, async (req, res) => {
-  const { votename, gubun, userSeq, startDate, endDate, voteOption, voteItems } = req.body;
+  const { votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems } = req.body;
   console.log(JSON.stringify(req.body));
-  if (!votename || !gubun || !startDate || userSeq === undefined || !endDate || !voteOption || !voteItems) {
+  if (!votename || !gubun || !startDate || userSeq === undefined || !endDate || !voteOption || !voteItems || !username) {
     return res.status(400).json({ statusCode: 400, message: '투표 등록 실패' });
   }
   try {
-    await insertVote(votename, gubun, userSeq, startDate, endDate, voteOption, voteItems);
+    await insertVote(votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems);
     return res.status(201).json({ statusCode: 201, message: '투표가 정상 등록되었습니다.' });
   } catch (error) {
     console.error(error);

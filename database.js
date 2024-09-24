@@ -141,7 +141,8 @@ export async function login(id, password) {
       id: 1,
       username: 1,
       userSeq: 1,
-      created: 1
+      created: 1,
+      gubun: 1
     }
   });
   return res;
@@ -161,7 +162,6 @@ export async function tokenCheck(id, password) {
 }
 
 export async function getVotes(gubun, userSeq, startDate, endDate) {
-
   const query = {};
 
   // 시스템 구분(gubun) 필터
@@ -175,7 +175,7 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
   // }
 
   // 시작일(startDate) 및 종료일(endDate) 필터
-  if (startDate || endDate) {
+  if (startDate && endDate) {
     query.startDate = {};
     if (startDate) {
       query.startDate.$gte = new Date(startDate);
@@ -183,12 +183,14 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
     if (endDate) {
       query.endDate = { $lte: new Date(endDate) };
     }
+  } else {
+    return { statusCode: 401, success: false };
   }
   console.log(query);
   // 투표 리스트 조회
   const res = await collVote.find(query).toArray();
   console.log(res)
-  return { statusCode: 200, success: true, data: res };
+  return { statusCode: 200, success: true, voteData: res };
 }
 
 // 새로운 orderSeq를 생성하는 함수
@@ -264,7 +266,7 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
   );
 
   // 투표의 전체 사용자 내역 조회
-  const votedetailData = await getVotedetail(undefined, voteId, undefined);
+  const votedetailData = await getVotedetail(voteId, undefined);
   console.log(`votedetailData ${JSON.stringify(votedetailData)}`);
 
   // 투표의 전체 사용자 내역 조회 voteItemSeq 만 뽑기
@@ -295,7 +297,7 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
 
 
 // 투표생성
-export async function insertVote(votename, gubun, userSeq, startDate, endDate, voteOption, voteItems) {
+export async function insertVote(votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems) {
   // 새 투표 객체 생성
   const processedVoteItems = await Promise.all(
     voteItems.map(async (item, index) => ({
@@ -314,6 +316,7 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, v
     endDate: new Date(endDate),
     createdDate: new Date(),
     updateDate: new Date(),
+    username,
     voteOption: voteOption || { dupl: false },
     voteItems: processedVoteItems,
     totalVoteCount: voteItems.reduce((total, item) => total + (item.voteCount || 0), 0)
@@ -324,13 +327,8 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, v
   return { statusCode: 201, success: true, message: "Vote inserted successfully.", data: res };
 }
 
-export async function getVotedetail(gubun, voteId, userSeq) {
+export async function getVotedetail(voteId, userSeq) {
   const query = {};
-
-  // 시스템 구분(gubun) 필터
-  if (gubun) {
-    query.gubun = gubun;
-  }
 
   // 투표 식별자(voteId) 필터, ObjectId로 변환해서 처리
   if (voteId) {
@@ -347,14 +345,10 @@ export async function getVotedetail(gubun, voteId, userSeq) {
   return res;
 }
 
-export async function getVote(gubun, voteId, userSeq) {
+export async function getVote(voteId, userSeq) {
   const query = {};
   const objectIdVoteId = new ObjectId(voteId);
 
-  // 시스템 구분(gubun) 필터
-  if (gubun) {
-    query.gubun = gubun;
-  }
 
   // 투표 식별자(voteId) 필터, ObjectId로 변환
   if (voteId) {
@@ -365,7 +359,7 @@ export async function getVote(gubun, voteId, userSeq) {
   const voteData = await collVote.find(query).toArray();
 
   // 사용자의 투표 내역 조회
-  const votedetailData = await getVotedetail(gubun, objectIdVoteId, userSeq);
+  const votedetailData = await getVotedetail(objectIdVoteId, userSeq);
 
   // 투표 항목 중 사용자가 투표한 항목 찾기
   const votedItemSeqs = votedetailData.map(detail => detail.voteItemSeq);
@@ -408,7 +402,7 @@ export async function updateVoting(voteId, userSeq, gubun, newVoteItemSeqs) {
 
 
   // 사용자가 투표내용
-  const votedetailData = await getVotedetail(gubun, voteId, userSeq);
+  const votedetailData = await getVotedetail(voteId, userSeq);
 
   // if (votedetailData.length === 0) {
   //   // 투표 기록이 없는 경우, 투표하지 않았다는 메시지 반환
