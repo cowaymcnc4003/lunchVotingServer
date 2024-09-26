@@ -1,5 +1,5 @@
 import express from 'express'
-import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck } from "./database.js"
+import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck, updateRunoffVoting } from "./database.js"
 import { swaggerUi, specs } from "./swagger.js";
 import jwt from "jsonwebtoken";
 import "./swaggerVotePaths.js";
@@ -182,6 +182,25 @@ app.post('/deleteVote', authorizationJWT, async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ statusCode: 500, message: '투표삭제에 실패하셨습니다.' });
+  }
+});
+
+
+// 결선 투표로 업데이트
+app.put('/runoffVoting', authorizationJWT, async (req, res) => {
+  console.log(req.body);
+
+  const { voteId, votename, voteItems } = req.body;
+  console.log(JSON.stringify(req.body));
+  if (!voteId || !voteItems || !votename) {
+    return res.status(400).json({ statusCode: 400, message: '결선 두표 등록 실패' });
+  }
+  try {
+    await updateRunoffVoting(voteId, votename, voteItems);
+    return res.status(201).json({ statusCode: 201, message: '투표가 정상 등록되었습니다.' });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ statusCode: 500, message: '투표 등록에 실패하셨습니다..' });
   }
 });
 

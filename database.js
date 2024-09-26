@@ -499,6 +499,57 @@ export async function deleteVote(voteId) {
   }
 }
 
+// 결선 투표 수정 API
+export async function updateRunoffVoting(voteId, votename, runoffVoteItems) {
+  const objectIdVoteId = new ObjectId(voteId);
+  console.log(objectIdVoteId);
+
+  // 투표 데이터 조회
+  const existingVote = await collVote.findOne({ voteId: objectIdVoteId });
+  if (!existingVote) {
+    return { statusCode: 400, success: false, message: "투표를 찾을 수 없습니다." };
+  }
+
+  // 새 투표 객체 생성
+  const processedVoteItems = await Promise.all(
+    runoffVoteItems.map(async (item, index) => ({
+      voteItemSeq: await getNextSequence("voteItemSeq"), // 비동기적으로 시퀀스 가져오기
+      voteName: item.voteName,
+      orderSeq: index + 1, // 인덱스를 기본 값으로 설정
+      voteCount: 0 // 기본 값 0으로 설정
+    }))
+  );
+
+  console.log(processedVoteItems);
+
+  // 기존 투표 항목을 새로 받은 항목으로 교체
+  const updateResult = await collVote.updateOne(
+    { voteId: objectIdVoteId },
+    { $set: { votename: votename, voteItems: processedVoteItems, totalVoteCount: 0 } } // 기존 항목을 클라이언트가 보낸 항목으로 대체
+  );
+
+  // 투표 이전 투표 기록 삭제
+  try {
+    const deleteResult = await collVoteDetail.deleteMany(
+      { voteId: objectIdVoteId } // voteId에 해당하는 모든 투표 세부 정보 삭제
+    );
+
+    if (deleteResult.deletedCount === 0) {
+      console.warn("삭제할 투표 기록이 없습니다."); // 로그로 경고
+    }
+  } catch (deleteError) {
+    console.error("투표 기록 삭제 중 오류 발생:", deleteError);
+    return { statusCode: 500, success: false, message: "투표 기록 삭제 중 오류가 발생했습니다." };
+  }
+
+  if (updateResult.modifiedCount === 0) {
+    return { statusCode: 500, success: false, message: "투표 항목을 업데이트하지 못했습니다." };
+  }
+
+  return { statusCode: 200, success: true, message: "투표 항목이 성공적으로 업데이트되었습니다." };
+}
+
+
 
 
 export async function insertVoteDetail(voteId, gubun, voteItemSeq, userSeq) {

@@ -627,4 +627,76 @@
  *                 error:
  *                   type: string
  *                   example: "Internal server error"
+ * 
+ * /runoffVoting:
+ *   put:
+ *     summary: "결선 투표 업데이트"
+ *     description: "결선 투표를 등록합니다."
+ *     tags: [Vote]
+ *     security:
+ *       - BearerAuth: []  # 각 경로에 security 추가
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               votename:
+ *                 type: string
+ *                 description: "점심"
+ *                 example: "점심"
+ *               voteId:
+ *                 type: string
+ *                 description: "투표 ID"
+ *                 example: "66e39a798421ffed46c26fe3"
+ *               voteItems:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 description: "투표 항목 목록"
+ *                 example: [{ "voteName": "영화관" }, { "voteName": "박물관" }, { "voteName": "집" }]
+ *             required:
+ *               - voteId
+ *               - voteItems
+ *     responses:
+ *       201:
+ *         description: "투표 등록 성공"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 201
+ *                 message:
+ *                   type: string
+ *                   example: "투표가 정상 등록되었습니다."
+ *       400:
+ *         description: "잘못된 요청 파라미터"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 400
+ *                 message:
+ *                   type: string
+ *                   example: "결선 두표 등록 실패"
+ *       500:
+ *         description: "서버 오류 발생"
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 statusCode:
+ *                   type: integer
+ *                   example: 500
+ *                 message:
+ *                   type: string
+ *                   example: "투표 등록에 실패하셨습니다."
  */
