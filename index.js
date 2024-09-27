@@ -112,6 +112,9 @@ app.post('/votes', authorizationJWT, async (req, res) => {
 app.post('/vote', authorizationJWT, async (req, res) => {
   const { voteId, userSeq } = req.body;
   try {
+    if (!voteId || userSeq === undefined) {
+      return res.status(400).json({ statusCode: 400, message: '투표 등록 실패' });
+    }
     const result = await getVote(voteId, userSeq);
     console.log(result);
     res.json(result);

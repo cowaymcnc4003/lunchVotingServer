@@ -170,6 +170,9 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
     query.gubun = gubun;
   }
 
+
+  getVoteDetailsByDate(gubun, userSeq, startDate, endDate);
+
   // 사용자 식별자(userSeq) 필터
   // if (userSeq) {
   //   query.userSeq = parseInt(userSeq, 10);
@@ -187,11 +190,18 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
   } else {
     return { statusCode: 401, success: false };
   }
-  console.log(query);
   // 투표 리스트 조회
   const res = await collVote.find(query).toArray();
-  console.log(res)
-  return { statusCode: 200, success: true, voteData: res };
+  // 각 투표 항목에 대해 duplicated 필드 추가
+  const voteData = await Promise.all(res.map(async (vote) => {
+    const votedetailData = await getVoteDetailsByDate(vote.voteId, userSeq, startDate, endDate);
+    return {
+      ...vote,
+      duplicated: votedetailData.length !== 0 // 투표 기록이 있으면 duplicated=true
+    };
+  }));
+
+  return { statusCode: 200, success: true, voteData };
 }
 
 // 새로운 orderSeq를 생성하는 함수
@@ -339,6 +349,33 @@ export async function getVotedetail(voteId, userSeq) {
   // 사용자 식별자(userSeq) 필터
   if (userSeq !== undefined) {
     query.userSeq = userSeq;
+  }
+
+  console.log(query);  // 디버깅을 위해 쿼리 로그 출력
+  const res = await collVoteDetail.find(query).toArray();
+  return res;
+}
+
+export async function getVoteDetailsByDate(voteId, userSeq, startDate, endDate) {
+  const query = {};
+
+  // 투표 식별자(voteId) 필터, ObjectId로 변환해서 처리
+  if (voteId) {
+    query.voteId = voteId;  // 문자열을 ObjectId로 변환
+  }
+
+  // 사용자 식별자(userSeq) 필터
+  if (userSeq !== undefined) {
+    query.userSeq = userSeq;
+  }
+
+  // 날짜 필터링: 시작 날짜와 종료 날짜를 기준으로
+  if (startDate) {
+    query.createdDate = { $gte: new Date(startDate) }; // 시작 날짜 이상
+  }
+
+  if (endDate) {
+    query.createdDate = { ...query.createdDate, $lte: new Date(endDate) }; // 종료 날짜 이하
   }
 
   console.log(query);  // 디버깅을 위해 쿼리 로그 출력
