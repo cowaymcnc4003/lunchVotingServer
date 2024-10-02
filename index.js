@@ -1,5 +1,5 @@
 import express from 'express'
-import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck, updateRunoffVoting } from "./database.js"
+import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, guestLogin, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck, updateRunoffVoting } from "./database.js"
 import { swaggerUi, specs } from "./swagger.js";
 import jwt from "jsonwebtoken";
 import "./swaggerVotePaths.js";
@@ -207,6 +207,19 @@ app.put('/runoffVoting', authorizationJWT, async (req, res) => {
     return res.status(500).json({ statusCode: 500, message: '투표 등록에 실패하셨습니다..' });
   }
 });
+
+// 게스트 로그인
+app.post("/guestLogin", async (req, res) => {
+  const { id, password } = req.body;
+  const result = await guestLogin(id, password);
+  if (!result) return res.status(401).json({ statusCode: 401, result, message: '게스트 로그인 실패' });
+  console.log(result);
+  const token = jwt.sign({ id: id, password: password }, "secret", {
+    expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
+  });
+  console.log(token);
+  return res.send({ statusCode: 201, token, result, message: '게스트 로그인 성공' });
+})
 
 // app.listen(port, () => {
 //   console.log(`Example app listening on port ${port}`)

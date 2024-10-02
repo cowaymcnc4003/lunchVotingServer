@@ -99,15 +99,17 @@ async function run() {
 async function getNextSequence(name) {
   const db = client.db("db_test");
   const collection = db.collection("counters");
+  // _id가 존재하지 않으면 0으로 초기화하고 생성
   const sequenceDocument = await collection.findOneAndUpdate(
     { _id: name },
-    { $inc: { sequence_value: 1 } },
-    { returnNewDocument: true } // 업데이트 후의 값을 반환
+    { $inc: { sequence_value: 1 } }, // sequence_value를 1씩 증가
+    { upsert: true, returnDocument: 'after' } // upsert 옵션 사용
   );
   console.log(sequenceDocument.sequence_value);
 
   return sequenceDocument.sequence_value;
 }
+
 
 export async function registUser(id, password, username, gubun) {
   try {
@@ -635,6 +637,31 @@ export async function insertSempleVote() {
     ],
     "totalVoteCount": 360
   });
+}
+
+export async function guestLogin(id, password) {
+  try {
+    // ID 중복 체크
+    const existingId = await collUser.findOne({ id: id });
+    if (!existingId) {
+      // 사용자 등록
+      const res = await collUser.insertOne({
+        userSeq: await getNextSequence("userId"),  // 고유한 사용자 번호
+        id: id,
+        password: password,
+        username: 'guest_' + await getNextSequence("guestSeq"),
+        gubun: 'guest',
+        created: new Date(),
+      });
+    }
+    const result = await login(id, password);
+    if (!result) return res.status(401).json({ statusCode: 401, result, message: '로그인 실패' });
+
+    return result;  // 201: Created
+  } catch (error) {
+    // 서버 오류 처리
+    return { statusCode: 500, success: false, message: "서버 오류 발생", error: error.message };  // 500: Internal Server Error
+  }
 }
 
 // insertSempleVote();
