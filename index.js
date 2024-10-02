@@ -134,8 +134,9 @@ app.put('/vote', authorizationJWT, async (req, res) => {
     return res.status(400).json({ statusCode: 400, message: '투표 등록 실패' });
   }
   try {
-    await insertVote(votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems);
-    return res.status(201).json({ statusCode: 201, message: '투표가 정상 등록되었습니다.' });
+    const result = await insertVote(votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems);
+    res.json(result);
+    // return res.status(201).json({ statusCode: 201, message: '투표가 정상 등록되었습니다.' });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ statusCode: 500, message: '투표 등록에 실패하셨습니다..' });

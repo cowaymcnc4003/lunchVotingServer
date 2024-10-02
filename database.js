@@ -306,7 +306,6 @@ export async function updateVote(voteId, voteItems, votename, startDate, endDate
   return { statusCode: 200, success: true, message: "Vote items updated successfully." };
 }
 
-
 // 투표생성
 export async function insertVote(votename, gubun, userSeq, startDate, endDate, username, voteOption, voteItems) {
   // 새 투표 객체 생성
@@ -318,6 +317,7 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, u
       voteCount: item.voteCount || 0 // 기본 값 0으로 설정
     }))
   );
+
   const newVote = {
     voteId: new ObjectId(),
     votename,
@@ -335,7 +335,16 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, u
 
   // 투표 정보를 MongoDB에 삽입
   const res = await collVote.insertOne(newVote);
-  return { statusCode: 201, success: true, message: "Vote inserted successfully.", data: res };
+
+  return {
+    statusCode: 201,
+    success: true,
+    message: "투표가 정상 등록되었습니다.",
+    data: {
+      ...res,
+      voteId: newVote.voteId // voteId 추가
+    }
+  };
 }
 
 export async function getVotedetail(voteId, userSeq) {
