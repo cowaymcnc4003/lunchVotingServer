@@ -10,10 +10,16 @@ app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
 const port = 9000
 
-app.use(cors());
+app.use(cors({
+  origin: '*', // 모든 출처 허용
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'] // 필요한 헤더 추가
+}));
+
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs))
 
 app.get('/', (req, res) => {
+  console.log('exit');
   res.send('Hello World!')
 })
 
@@ -40,12 +46,13 @@ app.post("/regist", async (req, res) => {
 
 // 로그인
 app.post("/login", async (req, res) => {
+  console.log('로그인');
   const { id, password } = req.body;
   const result = await login(id, password);
   if (!result) return res.status(401).json({ statusCode: 401, result, message: '로그인 실패' });
   console.log(result);
   const token = jwt.sign({ id: id, password: password }, "secret", {
-    expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
+    expiresIn: 3600 * 24 * 30, // 토큰 유효 시간 1시간 3600초 * 24 = 1일 * 30일
   });
   return res.send({ statusCode: 201, token, result, message: '로그인 성공' });
 })
@@ -65,21 +72,23 @@ async function authorizationJWT(req, res, next) {
 
     const token = authParts[1];
 
-    // JWT 토큰 검증
+    // JWT 토큰 검증 (만료 시간 자동 체크)
     const decoded = jwt.verify(token, 'secret');
-    console.log(decoded.id);
-    console.log(decoded.password);
 
-    // 토큰 정보로 사용자 인증 체크
-    const chkres = await tokenCheck(decoded.id, decoded.password);
-    if (chkres) {
-      next(); // 인증 성공 시 다음 미들웨어로 이동
-    } else {
-      return res.status(401).json({ statusCode: 401, message: '유효하지 않은 토큰입니다.' });
-    }
+    // 토큰에서 id만 사용 (예: 추가적인 인증 체크가 필요 없다면)
+    console.log(decoded.id);
+
+    // 인증 성공 시 다음 미들웨어로 이동
+    next();
 
   } catch (err) {
     console.error(err);
+
+    // 만약 토큰이 만료된 경우
+    if (err.name === 'TokenExpiredError') {
+      return res.status(401).json({ statusCode: 401, message: '토큰이 만료되었습니다.' });
+    }
+
     // JWT 토큰 검증 실패 또는 기타 예외 처리
     return res.status(401).json({ statusCode: 401, message: '토큰 검증 중 오류가 발생했습니다.' });
   }
@@ -91,7 +100,7 @@ app.post("/token", (req, res) => {
   if (id !== user.user) res.status(401).json({ statusCode: 401, message: '유효하지 않은 토큰입니다.' });
   if (pw !== user.password) res.status(401).json({ statusCode: 401, message: '유효하지 않은 토큰입니다.' });
   const token = jwt.sign({ id: id, name: user.name }, "secret", {
-    expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
+    expiresIn: 60, // 토큰 유효 시간 1시간 3600초
   });
   res.send({ token });
 });
@@ -212,10 +221,10 @@ app.put('/runoffVoting', authorizationJWT, async (req, res) => {
 app.post("/guestLogin", async (req, res) => {
   const { id, password } = req.body;
   const result = await guestLogin(id, password);
-  if (!result) return res.status(401).json({ statusCode: 401, result, message: '게스트 로그인 실패' });
+  // if (!result) return res.status(401).json({ statusCode: 401, result, message: '게스트 로그인 실패' });
   console.log(result);
-  const token = jwt.sign({ id: id, password: password }, "secret", {
-    expiresIn: 3600, // 토큰 유효 시간 1시간 3600초
+  const token = jwt.sign({ id: id }, "secret", {
+    expiresIn: 3600 * 24 * 30, // 토큰 유효 시간 1시간 3600초 * 24시 하루
   });
   console.log(token);
   return res.send({ statusCode: 201, token, result, message: '게스트 로그인 성공' });

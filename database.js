@@ -172,9 +172,6 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
     query.gubun = gubun;
   }
 
-
-  getVoteDetailsByDate(gubun, userSeq, startDate, endDate);
-
   // 사용자 식별자(userSeq) 필터
   // if (userSeq) {
   //   query.userSeq = parseInt(userSeq, 10);
@@ -641,23 +638,17 @@ export async function insertSempleVote() {
 
 export async function guestLogin(id, password) {
   try {
-    // ID 중복 체크
-    const existingId = await collUser.findOne({ id: id });
-    if (!existingId) {
-      // 사용자 등록
-      const res = await collUser.insertOne({
-        userSeq: await getNextSequence("userId"),  // 고유한 사용자 번호
-        id: id,
-        password: password,
-        username: 'guest_' + await getNextSequence("guestSeq"),
-        gubun: 'guest',
-        created: new Date(),
-      });
-    }
-    const result = await login(id, password);
-    if (!result) return res.status(401).json({ statusCode: 401, result, message: '로그인 실패' });
+    const guestSeq = await getNextSequence("guestSeq");
+    // 사용자 등록
+    const res = {
+      userSeq: 'guest_' + guestSeq,  // 고유한 사용자 번호
+      id: 'guest_' + guestSeq,
+      username: 'guest_' + guestSeq,
+      gubun: 'guest',
+      created: new Date(),
+    };
 
-    return result;  // 201: Created
+    return res;  // 201: Created
   } catch (error) {
     // 서버 오류 처리
     return { statusCode: 500, success: false, message: "서버 오류 발생", error: error.message };  // 500: Internal Server Error
