@@ -164,7 +164,7 @@ export async function tokenCheck(id, password) {
   return res;
 }
 
-export async function getVotes(gubun, userSeq, startDate, endDate) {
+export async function getVotes(gubun, userSeq, startDate, endDate, voteStateOption) {
   const query = {};
 
   // 시스템 구분(gubun) 필터
@@ -178,25 +178,51 @@ export async function getVotes(gubun, userSeq, startDate, endDate) {
   // }
 
   // 시작일(startDate) 및 종료일(endDate) 필터
-  if (startDate && endDate) {
-    query.startDate = {};
-    if (startDate) {
-      query.startDate.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      query.endDate = { $lte: new Date(endDate) };
-    }
-  } else {
-    return { statusCode: 401, success: false };
+  // if (startDate && endDate) {
+  //   query.startDate = {};
+  //   if (startDate) {
+  //     query.startDate.$gte = new Date(startDate);
+  //   }
+  //   if (endDate) {
+  //     query.endDate = { $lte: new Date(endDate) };
+  //   }
+  // } else {
+  //   return { statusCode: 401, success: false };
+  // }
+
+  // 현재 날짜 가져오기
+  const currentDate = new Date();
+
+  // voteStateOption이 'ING'인 경우, 종료일(endDate)이 현재 날짜보다 큰 투표만 필터링
+  if (voteStateOption === 'ING') {
+    query.$and = [
+      { endDate: { $gt: currentDate } }, // endDate가 현재 날짜보다 작은 경우
+      { isClosed: false } // isClosed가 false 경우
+    ];
   }
+
+  // voteStateOption이 'END'인 경우, 종료일(endDate)이 현재 날짜보다 작은 투표만 필터링
+  if (voteStateOption === 'END') {
+    query.$or = [
+      { endDate: { $lte: currentDate } }, // endDate가 현재 날짜보다 작은 경우
+      { isClosed: true } // isClosed가 true인 경우
+    ];
+  }
+
+
   // 투표 리스트 조회
-  const res = await collVote.find(query).toArray();
+  const res = await collVote.find(query).sort({ createdDate: -1 }).toArray(); // createdAt을 기준으로 내림차순 정렬
+  console.log(res);
   // 각 투표 항목에 대해 duplicated 필드 추가
   const voteData = await Promise.all(res.map(async (vote) => {
     const votedetailData = await getVoteDetailsByDate(vote.voteId, userSeq, startDate, endDate);
+    const isClosed = vote?.isClosed || false;
+
     return {
       ...vote,
-      duplicated: votedetailData.length !== 0 // 투표 기록이 있으면 duplicated=true
+      duplicated: votedetailData.length !== 0, // 투표 기록이 있으면 duplicated=true
+      voteState: vote.endDate < currentDate || isClosed ? 'END' : 'ING', // 현재 날짜보다 endDate가 이전이면 END 아니면 ING
+      // isClosed,
     };
   }));
 
@@ -329,7 +355,8 @@ export async function insertVote(votename, gubun, userSeq, startDate, endDate, u
     username,
     voteOption: voteOption || { dupl: false },
     voteItems: processedVoteItems,
-    totalVoteCount: voteItems.reduce((total, item) => total + (item.voteCount || 0), 0)
+    totalVoteCount: voteItems.reduce((total, item) => total + (item.voteCount || 0), 0),
+    isClosed: false
   };
 
   // 투표 정보를 MongoDB에 삽입
@@ -595,7 +622,28 @@ export async function updateRunoffVoting(voteId, votename, runoffVoteItems) {
 }
 
 
+// 결선 투표 종료 플래그 업데이트 API
+export async function updateVoteClose(voteId) {
+  const objectIdVoteId = new ObjectId(voteId);
 
+  // 투표 데이터 조회
+  const existingVote = await collVote.findOne({ voteId: objectIdVoteId });
+  if (!existingVote) {
+    return { statusCode: 400, success: false, message: "투표를 찾을 수 없습니다." };
+  }
+
+  // 투표 종료 플래그 업데이트
+  const updateVoteCloseResult = await collVote.updateOne(
+    { voteId: objectIdVoteId },
+    { $set: { isClosed: true } } // isClosed 필드만 업데이트
+  );
+
+  if (updateVoteCloseResult.modifiedCount === 0) {
+    return { statusCode: 500, success: false, message: "투표 종료 플래그를 업데이트하지 못했습니다." };
+  }
+
+  return { statusCode: 200, success: true, message: "투표 종료 플래그가 성공적으로 업데이트되었습니다." };
+}
 
 export async function insertVoteDetail(voteId, gubun, voteItemSeq, userSeq) {
   const newVoteDetail = {

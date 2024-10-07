@@ -1,5 +1,5 @@
 import express from 'express'
-import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, guestLogin, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck, updateRunoffVoting } from "./database.js"
+import { getNotes, getNote, addNotes, updateNote, deleteNote, registUser, login, guestLogin, getVotes, insertVote, insertVoteDetail, getVote, updateVote, deleteVote, updateVoting, tokenCheck, updateRunoffVoting, updateVoteClose } from "./database.js"
 import { swaggerUi, specs } from "./swagger.js";
 import jwt from "jsonwebtoken";
 import "./swaggerVotePaths.js";
@@ -107,9 +107,9 @@ app.post("/token", (req, res) => {
 
 // 투표 날짜별 조회
 app.post('/votes', authorizationJWT, async (req, res) => {
-  const { gubun, userSeq, startDate, endDate } = req.body;
+  const { gubun, userSeq, startDate, endDate, voteStateOption } = req.body;
   try {
-    const result = await getVotes(gubun, userSeq, startDate, endDate);
+    const result = await getVotes(gubun, userSeq, startDate, endDate, voteStateOption);
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -229,6 +229,24 @@ app.post("/guestLogin", async (req, res) => {
   console.log(token);
   return res.send({ statusCode: 201, token, result, message: '게스트 로그인 성공' });
 })
+
+// 투표 종료
+app.put('/voteClose', authorizationJWT, async (req, res) => {
+  console.log(req.body);
+
+  const { voteId } = req.body;
+  console.log(JSON.stringify(req.body));
+  if (!voteId) {
+    return res.status(400).json({ statusCode: 400, message: '투표 종료 실패' });
+  }
+  try {
+    const result = await updateVoteClose(voteId);
+    return res.json(result);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ statusCode: 500, message: '투표 종료에 실패하셨습니다..' });
+  }
+});
 
 // app.listen(port, () => {
 //   console.log(`Example app listening on port ${port}`)
