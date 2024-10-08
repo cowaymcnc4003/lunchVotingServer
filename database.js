@@ -447,6 +447,7 @@ export async function getVote(voteId, userSeq) {
       voteItems: item.voteItems.map(voteItem => ({
         ...voteItem,
         isVoted: votedItemSeqs.includes(voteItem.voteItemSeq),  // 사용자가 해당 항목에 투표했는지 여부
+        isClosed: voteItem.endDate < currentDate || voteItem.isClosed ? true : false, // 현재 날짜보다 endDate가 이전이면 END 아니면 ING
       })),
     })
   });
