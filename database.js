@@ -436,16 +436,20 @@ export async function getVote(voteId, userSeq) {
 
   // 투표 항목 중 사용자가 투표한 항목 찾기
   const votedItemSeqs = votedetailData.map(detail => detail.voteItemSeq);
+  const currentDate = new Date();
 
   // voteData에 duplicated 및 isVoted 플래그 추가
-  const extendedVoteData = voteData.map(item => ({
-    ...item,
-    duplicated: votedetailData.length !== 0,  // 사용자가 이미 투표했는지 여부
-    voteItems: item.voteItems.map(voteItem => ({
-      ...voteItem,
-      isVoted: votedItemSeqs.includes(voteItem.voteItemSeq),  // 사용자가 해당 항목에 투표했는지 여부
-    })),
-  }));
+  const extendedVoteData = voteData.map(item => {
+    console.log(item.isClosed);
+    return ({
+      ...item,
+      duplicated: votedetailData.length !== 0,  // 사용자가 이미 투표했는지 여부
+      voteItems: item.voteItems.map(voteItem => ({
+        ...voteItem,
+        isVoted: votedItemSeqs.includes(voteItem.voteItemSeq),  // 사용자가 해당 항목에 투표했는지 여부
+      })),
+    })
+  });
 
   return extendedVoteData;
 }
@@ -597,7 +601,7 @@ export async function updateRunoffVoting(voteId, votename, runoffVoteItems) {
   // 기존 투표 항목을 새로 받은 항목으로 교체
   const updateResult = await collVote.updateOne(
     { voteId: objectIdVoteId },
-    { $set: { votename: votename, voteItems: processedVoteItems, totalVoteCount: 0 } } // 기존 항목을 클라이언트가 보낸 항목으로 대체
+    { $set: { votename: votename, voteItems: processedVoteItems, totalVoteCount: 0, isClosed: false } } // 기존 항목을 클라이언트가 보낸 항목으로 대체
   );
 
   // 투표 이전 투표 기록 삭제
